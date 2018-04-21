@@ -5,16 +5,12 @@ from time import time
 import fnmatch
 import shutil
 import subprocess
-import darknet as dn
-
-dn.set_gpu(0)
-net = dn.load_net("cfg/yolo.cfg", "yolo.weights", 0)
-meta = dn.load_meta("data/yolo-obj.data")
 
 class DarknetWrapper:
 
     def __init__(self):
-        self.found_files = 0
+        self.found_frames = 0
+        self.found_weights = 0
 
     def get_list_of_frames(self):
         file_paths = []
@@ -23,7 +19,7 @@ class DarknetWrapper:
                 file_paths.append(os.path.join(root, filename))
 
         print "Found " + str(len(file_paths)) + " frames"
-        self.found_files = len(file_paths)
+        self.found_frames = len(file_paths)
         return file_paths
 
     def get_list_of_weights(self):
@@ -33,14 +29,12 @@ class DarknetWrapper:
                 file_paths.append(os.path.join(root, filename))
 
         print "Found " + str(len(file_paths)) + " weights"
-        self.found_files = len(file_paths)
+        self.found_weights = len(file_paths)
         return file_paths
 
     def get_predicted_image(self):
         for file in os.listdir('.'):
             if file == 'predictions.png':
-                return file
-            if file == 'predictions.jpg':
                 return file
 
     def move_predicted_image(self, original_file, predicted_file, weight):
@@ -53,23 +47,33 @@ class DarknetWrapper:
             os.makedirs(new_path)
         shutil.move(predicted_file, new_path + new_name)
 
-    def find_objects_on_image(self, net, meta, frame):
-        # frame = 'data/frames/1_frames/scene00776.jpg
-        dn.detect(net, meta, frame)
-        # print r
+    def find_objects_on_image(self, frame, data=' cfg/coco.data', config=' yolo-obj.cfg',
+                              weights=' backup/yolo.weights '):
+        # frame = 'data/frames/1_frames/scene00776.jpg'
+        command = './darknet detector test' + data + config + weights
+        proc = subprocess.Popen(command + frame, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        (output, error) = proc.communicate()
+        print output, error
+
+    def run(self):
+        list_of_frames = self.get_list_of_frames()
 
 
 cos = DarknetWrapper()
 list_of_frames = cos.get_list_of_frames()
-count = 0
 list_of_weights = cos.get_list_of_weights()
 
-for weight in list_of_weights:
-    net = dn.load_net("yolo-obj.cfg", weight, 0)
 
+count_weights= 0
+
+for weight in list_of_weights:
+    count_frames = 0
+    count_weights +=1
     for frame in list_of_frames:
-        cos.find_objects_on_image(net, meta, frame)
+        cos.find_objects_on_image(frame, data=' cfg/coco.data', config=' yolo-obj.cfg',
+                              weights=' ' + weight + ' ')
         predicted_frame = cos.get_predicted_image()
-        cos.move_predicted_image(frame, predicted_frame, weight) #nie ma obrazka - tylko wspolrzedne sa
-        count += 1
-        print "\n\n\nPredicted: " + str(count) + "/" + str(cos.found_files) + " frames for weight " + weight + "\n\n\n"
+        cos.move_predicted_image(frame, predicted_frame, weight)
+        count_frames += 1
+        print "\n\nWeight: " + str(count_weights) + "/" + str(cos.found_weights)
+        print "\nPredicted: " + str(count_frames) + "/" + str(cos.found_frames) + " frames for weight " + weight + "\n\n\n"
