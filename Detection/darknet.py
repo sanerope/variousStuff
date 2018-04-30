@@ -118,14 +118,17 @@ def detect(net, meta, image, thresh=.5, hier_thresh=.5, nms=.45):
     num =   num_boxes(net)
     network_detect(net, im, thresh, hier_thresh, nms, boxes, probs)
     res = []
+    text_do_zapisu = []
     for j in range(num):
         for i in range(meta.classes):
             if probs[j][i] > 0:
                 res.append((meta.names[i], probs[j][i], (boxes[j].x, boxes[j].y, boxes[j].w, boxes[j].h)))
+                text_do_zapisu += '0 ' + str(boxes[j].x) + ' ' + str(boxes[j].y) + ' ' + str(boxes[j].w) + ' ' + str(
+                    boxes[j].h) + '\n'
     res = sorted(res, key=lambda x: -x[1])
     free_image(im)
     free_ptrs(cast(probs, POINTER(c_void_p)), num)
-    return res
+    return res, text_do_zapisu
     
 if __name__ == "__main__":
     #net = load_net("cfg/densenet201.cfg", "/home/pjreddie/trained/densenet201.weights", 0)
