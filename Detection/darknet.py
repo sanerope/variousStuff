@@ -118,7 +118,7 @@ def detect(net, meta, image, thresh=.5, hier_thresh=.5, nms=.45):
     num =   num_boxes(net)
     network_detect(net, im, thresh, hier_thresh, nms, boxes, probs)
     res = []
-    text_do_zapisu = []
+    text_do_zapisu = ''
     for j in range(num):
         for i in range(meta.classes):
             if probs[j][i] > 0:
